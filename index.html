@@ -1,1 +1,553 @@
-<!DOCTYPE html>\n<html lang="en">\n<head>\n    <meta charset="UTF-8">\n    <meta name="viewport" content="width=device-width, initial-scale=1.0">\n    <title>Heart-Popping Game</title>\n    <style>\n        body { font-family: Arial, sans-serif; text-align: center; }\n        #game { margin: 20px auto; }\n        .hidden { display: none; }\n    </style>\n</head>\n<body>\n    <h1>Heart-Popping Game</h1>\n    <div id="game">\n        <h2 id="score-display">Score: 0</h2>\n        <h2 id="high-score-display">High Score: 0</h2>\n        <canvas id="gameCanvas" width="400" height="400"></canvas>\n        <button id="start-btn">Start Game</button>\n    </div>\n    <script>\n        let score = 0;\n        let highScore = 0;\n        let difficulty = 1000; // Initial difficulty level\n        let combo = 0;\n        let comboThreshold = 5;\n        let powerUpActive = false;\n        let comboMessage = '';\n        let canvas = document.getElementById('gameCanvas');\n        let ctx = canvas.getContext('2d');\n        let heart;\n        let heartImage = new Image();\n        heartImage.src = 'heart.png'; // Add heart image\n        let powerUpImage = new Image();\n        powerUpImage.src = 'powerup.png'; // Add power-up image\n        let timer;\n        let powerUpTimer;\n        let gameActive = false;\n\n        const startGame = () => {\n            score = 0;\n            difficulty = 1000;\n            combo = 0;\n            comboMessage = '';\n            gameActive = true;\n            document.getElementById('start-btn').classList.add('hidden');\n            document.getElementById('score-display').innerText = 'Score: ' + score;\n            spawnHeart();\n        };\n\n        const spawnHeart = () => {\n            ctx.clearRect(0, 0, canvas.width, canvas.height);\n            let x = Math.random() * (canvas.width - 40);\n            let y = Math.random() * (canvas.height - 40);\n            ctx.drawImage(heartImage, x, y, 40, 40);\n            startTimer();\n        };\n\n        const startTimer = () => {\n            clearTimeout(timer);\n            timer = setTimeout(() => {\n                if (gameActive) {\n                    alert('Time is up! Your Score: ' + score);\n                    if (score > highScore) {\n                        highScore = score;\n                    }\n                    gameActive = false;\n                    document.getElementById('high-score-display').innerText = 'High Score: ' + highScore;\n                    document.getElementById('start-btn').classList.remove('hidden');\n                }\n            }, difficulty);\n        };\n\n        const checkClick = (event) => {\n            if (!gameActive) return;\n            // Check if heart is clicked\n            // Increment score and handle combo/power-ups\n            score++;\n            combo++;\n            if (combo >= comboThreshold) {\n                comboMessage = 'Combo!';\n                score += 5;\n                combo = 0;\n                // Activate power-up\n                powerUpActive = true;\n                spawnPowerUp();\n            }\n            document.getElementById('score-display').innerText = 'Score: ' + score;\n            spawnHeart();\n        };\n\n        const spawnPowerUp = () => {\n            ctx.drawImage(powerUpImage, Math.random() * (canvas.width - 40), Math.random() * (canvas.height - 40), 40, 40);\n            powerUpTimer = setTimeout(() => {\n                powerUpActive = false;\n            }, 5000); // Power-up lasts for 5 seconds\n        };\n\n        canvas.addEventListener('click', checkClick);\n        document.getElementById('start-btn').addEventListener('click', startGame);\n    </script>\n</body>\n</html>\n
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Audiowide&display=swap');
+        body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: #000; }
+        canvas { display: block; touch-action: none; }
+        #ui {
+            position: absolute; top: 25px; right: 25px;
+            display: flex; align-items: center; gap: 12px;
+            font-family: 'Audiowide', cursive; color: white; font-size: 28px;
+            z-index: 200; pointer-events: none;
+            text-shadow: 0 0 15px rgba(255, 255, 255, 0.4);
+        }
+        .mini-heart {
+            width: 18px; height: 18px; background: #ff00ea;
+            transform: rotate(-45deg); transition: background 0.5s;
+            position: relative;
+        }
+        .mini-heart::before, .mini-heart::after {
+            content: ""; width: 18px; height: 18px;
+            background: inherit; border-radius: 50%; position: absolute;
+        }
+        .mini-heart::before { top: -9px; left: 0; }
+        .mini-heart::after { top: 0; left: 9px; }
+        #ui-left {
+            position: absolute; top: 25px; left: 25px;
+            display: flex; flex-direction: column; gap: 8px;
+            font-family: 'Audiowide', cursive; color: white; font-size: 16px;
+            z-index: 200; pointer-events: none;
+            text-shadow: 0 0 15px rgba(255, 255, 255, 0.4);
+        }
+        .ui-stat { padding: 5px 10px; background: rgba(0,0,0,0.5); border-radius: 4px; }
+        .combo-text { font-size: 24px; color: #ff00ea; font-weight: bold; animation: pulse 0.3s; }
+        @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.2); } 100% { transform: scale(1); } }
+        .achievement-popup {
+            position: fixed; bottom: 20px; right: 20px;
+            background: linear-gradient(135deg, #ff00ea, #00f2ff);
+            padding: 15px 20px; border-radius: 8px;
+            font-family: 'Audiowide', cursive; color: white;
+            font-size: 14px; z-index: 300;
+            animation: slideIn 0.5s ease-out;
+        }
+        @keyframes slideIn { from { transform: translateX(400px); } to { transform: translateX(0); } }
+    </style>
+</head>
+<body>
+
+    <div id="ui">
+        <div class="mini-heart" id="uiHeart"></div>
+        <span id="score">0</span>
+    </div>
+
+    <div id="ui-left">
+        <div class="ui-stat">Difficulty: <span id="difficulty">1</span></div>
+        <div class="ui-stat">Combo: x<span id="combo-display">1</span></div>
+        <div class="ui-stat" id="power-up-display" style="display:none;">⚡ Power Active</div>
+        <div class="ui-stat">High Score: <span id="high-score">0</span></div>
+    </div>
+
+    <canvas id="canvas"></canvas>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const scoreEl = document.getElementById('score');
+        const uiHeart = document.getElementById('uiHeart');
+        const comboDisplayEl = document.getElementById('combo-display');
+        const difficultyEl = document.getElementById('difficulty');
+        const powerUpDisplayEl = document.getElementById('power-up-display');
+        const highScoreEl = document.getElementById('high-score');
+        
+        let width, height, particles = [];
+        let hearts = [];
+        let megaHeart = null;
+        let totalPopped = 0;
+        let currentColors = ['#ff00ea', '#00f2ff', '#39ff14', '#ffffff'];
+
+        let waves = [];
+        let stars = [];
+        let shootingStar = null;
+        let waveTick = 0;
+        let horizonY;
+
+        // NEW: Game mechanics
+        let combo = 1;
+        let comboTimer = 0;
+        let comboTimeout = 1.5; // seconds
+        let difficulty = 1;
+        let highScore = parseInt(localStorage.getItem('highScore')) || 0;
+        let achievements = new Set(JSON.parse(localStorage.getItem('achievements')) || []);
+        let powerUpActive = null;
+        let powerUpTimer = 0;
+        let powerUpType = null;
+
+        const POWER_UP_TYPES = {
+            FREEZE: 'freeze',
+            MULTIPLIER: 'multiplier',
+            BOMB: 'bomb'
+        };
+
+        const ACHIEVEMENTS = {
+            FIRST_BLOOD: 'firstBlood',
+            ON_FIRE: 'onFire',
+            POWER_COLLECTOR: 'powerCollector',
+            MEGA_POPPER: 'megaPopper',
+            UNSTOPPABLE: 'unstoppable',
+            LEGEND: 'legend'
+        };
+
+        function initStars() {
+            stars = [];
+            for(let i=0; i<960; i++) stars.push(resetStar({}));
+        }
+
+        function resetStar(s) {
+            s.x = (Math.random() - 0.5) * width * 2.2; 
+            s.y = (Math.random() - 0.7) * horizonY; 
+            s.z = 2 + Math.random() * 4; 
+            s.size = 0.1 + Math.random() * 0.45;
+            s.blink = Math.random() * Math.PI;
+            return s;
+        }
+
+        function spawnShootingStar() {
+            const side = Math.random() > 0.5 ? -50 : width + 50;
+            shootingStar = {
+                x: side,
+                y: Math.random() * (horizonY * 0.5),
+                vx: side < 0 ? 15 + Math.random() * 10 : -(15 + Math.random() * 10),
+                vy: (Math.random() - 0.2) * 4,
+                life: 1.0,
+                color: currentColors[Math.floor(Math.random() * 3)]
+            };
+        }
+
+        setInterval(spawnShootingStar, 10000);
+
+        function drawStars() {
+            ctx.save();
+            const centerX = width / 2;
+            const centerY = horizonY / 2;
+            for(let s of stars) {
+                s.z -= 0.0012; 
+                if(s.z <= 0.1) resetStar(s);
+                const k = 600 / s.z;
+                const px = centerX + s.x * k;
+                const py = centerY + s.y * k;
+                if (py > horizonY - 2 || px < -width || px > width * 2 || py < -height) {
+                    resetStar(s);
+                    continue;
+                }
+                s.blink += 0.01;
+                ctx.globalAlpha = 0.2 + Math.abs(Math.sin(s.blink)) * 0.8;
+                ctx.fillStyle = "white";
+                ctx.beginPath();
+                ctx.arc(px, py, s.size, 0, Math.PI * 2);
+                ctx.fill();
+            }
+            if (shootingStar) {
+                shootingStar.x += shootingStar.vx;
+                shootingStar.y += shootingStar.vy;
+                shootingStar.life -= 0.015;
+                if (shootingStar.life <= 0) {
+                    shootingStar = null;
+                } else {
+                    ctx.save();
+                    ctx.globalAlpha = shootingStar.life;
+                    ctx.strokeStyle = shootingStar.color;
+                    ctx.lineWidth = 2;
+                    ctx.shadowBlur = 10;
+                    ctx.shadowColor = shootingStar.color;
+                    ctx.beginPath();
+                    ctx.moveTo(shootingStar.x, shootingStar.y);
+                    ctx.lineTo(shootingStar.x - shootingStar.vx * 4, shootingStar.y - shootingStar.vy * 4);
+                    ctx.stroke();
+                    ctx.restore();
+                }
+            }
+            ctx.restore();
+        }
+
+        function spawnWave(zValue = 2) {
+            return { z: zValue, phase: Math.random() * Math.PI * 2 };
+        }
+
+        function drawOcean() {
+            waveTick += 0.016;
+            ctx.save();
+            for (let i = 0; i < waves.length; i++) {
+                let w = waves[i];
+                const moveSpeed = (0.0015 + (Math.pow(2 - w.z, 2) * 0.005)) * 0.4;
+                w.z -= moveSpeed;
+                if (w.z <= 0) { w.z = 2; w.phase = Math.random() * Math.PI * 2; }
+                const depth = Math.pow((2 - w.z) / 2, 1.5); 
+                const yPos = horizonY + (depth * (height - horizonY));
+                const waveWidth = width * (1 + (depth * 9)); 
+                const xStart = (width / 2) - (waveWidth / 2);
+                ctx.lineWidth = 0.5 + (depth * 2.5);
+                ctx.globalAlpha = depth < 0.05 ? depth * 20 : 0.7 * (1 - depth * 0.4);
+                ctx.strokeStyle = currentColors[1];
+                ctx.beginPath();
+                for (let j = 0; j <= 10; j++) {
+                    const tx = xStart + (j / 10) * waveWidth;
+                    const ty = yPos + Math.sin(j * 0.6 + waveTick + w.phase) * (0.5 + depth * 20);
+                    if (j === 0) ctx.moveTo(tx, ty); else ctx.lineTo(tx, ty);
+                }
+                ctx.stroke();
+            }
+            ctx.restore();
+        }
+
+        function changePalette() {
+            const getNeon = () => `hsl(${Math.floor(Math.random() * 360)}, 100%, 60%)`;
+            const newCol = getNeon();
+            currentColors = [newCol, getNeon(), getNeon(), '#ffffff'];
+            uiHeart.style.background = newCol; 
+        }
+
+        function resize() {
+            width = canvas.width = window.innerWidth;
+            height = canvas.height = window.innerHeight;
+            horizonY = height * 0.65; 
+            initStars();
+            waves = [];
+            for(let i=0; i<22; i++) waves.push(spawnWave(0.1 + (i * 0.09)));
+        }
+        window.addEventListener('resize', resize);
+        resize();
+
+        class HeartBase {
+            constructor(isMega = false) {
+                this.isMega = isMega;
+                this.powerUpType = null;
+                this.reset();
+            }
+            reset() {
+                this.x = Math.random() * (width - 100) + 50;
+                this.y = Math.random() * (height - 100) + 50;
+                this.size = this.isMega ? 20 : 25 + Math.random() * 15;
+                const speedMult = this.isMega ? 8 : 3 + (difficulty * 0.5);
+                this.vx = (Math.random() - 0.5) * speedMult;
+                this.vy = (Math.random() - 0.5) * speedMult;
+                this.visible = true;
+                this.pulse = 0;
+                this.isCaptured = false;
+                this.captureTimer = 0;
+                
+                // Random power-up assignment
+                if (!this.isMega && Math.random() < 0.08) {
+                    const types = Object.values(POWER_UP_TYPES);
+                    this.powerUpType = types[Math.floor(Math.random() * types.length)];
+                }
+            }
+            update() {
+                if (!this.visible) return;
+                if (this.isCaptured) {
+                    this.captureTimer--;
+                    if (this.captureTimer <= 0) this.explode(true);
+                    return;
+                }
+                if (powerUpActive === POWER_UP_TYPES.FREEZE) {
+                    this.pulse += 0.05;
+                } else {
+                    this.x += this.vx; this.y += this.vy;
+                    this.pulse += 0.15;
+                }
+                if (this.x < 30 || this.x > width - 30) this.vx *= -1;
+                if (this.y < 30 || this.y > height - 30) this.vy *= -1;
+            }
+            draw() {
+                if (!this.visible) return;
+                const s = this.size + Math.sin(this.pulse) * (this.isMega ? 6 : 4);
+                let drawX = this.x; let drawY = this.y;
+                if (this.isCaptured) {
+                    drawX += (Math.random() - 0.5) * 8;
+                    drawY += (Math.random() - 0.5) * 8;
+                }
+                ctx.save();
+                ctx.translate(drawX, drawY);
+                ctx.rotate(Math.PI);
+                ctx.beginPath();
+                ctx.moveTo(0, 0);
+                for (let i = 0; i < 30; i++) {
+                    const angle = (i / 30) * Math.PI * 2;
+                    const hx = 16 * Math.pow(Math.sin(angle), 3);
+                    const hy = 13 * Math.cos(angle) - 5 * Math.cos(2 * angle) - 2 * Math.cos(3 * angle) - Math.cos(4 * angle);
+                    ctx.lineTo(hx * (s / 30), hy * (s / 30));
+                }
+                
+                if (this.powerUpType === POWER_UP_TYPES.FREEZE) {
+                    ctx.fillStyle = "#00f2ff";
+                    ctx.shadowColor = "#00f2ff";
+                } else if (this.powerUpType === POWER_UP_TYPES.MULTIPLIER) {
+                    ctx.fillStyle = "#FFD700";
+                    ctx.shadowColor = "#FFD700";
+                } else if (this.powerUpType === POWER_UP_TYPES.BOMB) {
+                    ctx.fillStyle = "#ff6b00";
+                    ctx.shadowColor = "#ff6b00";
+                } else {
+                    ctx.fillStyle = this.isMega ? "#FFD700" : currentColors[0];
+                    ctx.shadowColor = this.isMega ? "#FFD700" : currentColors[0];
+                }
+                
+                ctx.shadowBlur = this.isMega ? 35 : (this.powerUpType ? 25 : 15);
+                ctx.fill();
+                ctx.restore();
+            }
+            explode(isBonus = false) {
+                this.visible = false;
+                this.isCaptured = false;
+                const oldScore = totalPopped;
+                
+                let points = this.isMega ? 5 : 1;
+                points *= combo;
+                totalPopped += points;
+                
+                // Handle power-ups
+                if (this.powerUpType) {
+                    activatePowerUp(this.powerUpType);
+                }
+                
+                scoreEl.innerText = totalPopped;
+                const pCount = isBonus ? 1104 : 552; 
+                for (let i = 0; i < pCount; i++) {
+                    particles.push(new Particle(this.x, this.y, this.isMega ? "#FFD700" : currentColors[Math.floor(Math.random() * 3)], false, '', Math.random()*6.28, Math.random()*10+2));
+                }
+                
+                // Update high score
+                if (totalPopped > highScore) {
+                    highScore = totalPopped;
+                    localStorage.setItem('highScore', highScore);
+                    highScoreEl.innerText = highScore;
+                }
+                
+                if (Math.floor(totalPopped / 20) > Math.floor(oldScore / 20)) {
+                    changePalette();
+                    triggerMilestone();
+                }
+                
+                // Check achievements
+                checkAchievements();
+                
+                setTimeout(() => this.reset(), 3000);
+            }
+        }
+
+        function activatePowerUp(type) {
+            powerUpActive = type;
+            powerUpTimer = type === POWER_UP_TYPES.FREEZE ? 6000 : 10000;
+            powerUpDisplayEl.style.display = 'block';
+            
+            if (type === POWER_UP_TYPES.MULTIPLIER) {
+                combo = Math.min(combo * 2, 8);
+            } else if (type === POWER_UP_TYPES.BOMB) {
+                triggerExtremeBoom(width/2, height/2, false);
+            }
+            
+            incrementAchievement(ACHIEVEMENTS.POWER_COLLECTOR);
+        }
+
+        function incrementAchievement(achId) {
+            if (!achievements.has(achId)) {
+                achievements.add(achId);
+                localStorage.setItem('achievements', JSON.stringify([...achievements]));
+                showAchievementPopup(achId);
+            }
+        }
+
+        function checkAchievements() {
+            if (totalPopped === 1) incrementAchievement(ACHIEVEMENTS.FIRST_BLOOD);
+            if (combo >= 5) incrementAchievement(ACHIEVEMENTS.ON_FIRE);
+            if (totalPopped >= 100) incrementAchievement(ACHIEVEMENTS.MEGA_POPPER);
+            if (totalPopped >= 500) incrementAchievement(ACHIEVEMENTS.UNSTOPPABLE);
+            if (totalPopped >= 1000) incrementAchievement(ACHIEVEMENTS.LEGEND);
+        }
+
+        function showAchievementPopup(achId) {
+            const names = {
+                firstBlood: '🎯 First Blood',
+                onFire: '🔥 On Fire',
+                powerCollector: '💎 Power Collector',
+                megaPopper: '💥 Mega Popper',
+                unstoppable: '⚡ Unstoppable',
+                legend: '👑 Legend'
+            };
+            const popup = document.createElement('div');
+            popup.className = 'achievement-popup';
+            popup.innerText = 'Achievement: ' + names[achId];
+            document.body.appendChild(popup);
+            setTimeout(() => popup.remove(), 3000);
+        }
+
+        class Particle {
+            constructor(x, y, color, isText = false, char = '', angle, speed) {
+                this.x = x; this.y = y; this.color = color;
+                this.isText = isText; this.char = char;
+                this.targetVx = Math.cos(angle) * speed;
+                this.targetVy = Math.sin(angle) * speed;
+                if (isText) {
+                    const launchAngle = Math.random() * Math.PI * 2;
+                    const launchSpeed = 14 + Math.random() * 6; 
+                    this.targetVx = Math.cos(launchAngle) * launchSpeed;
+                    this.targetVy = Math.sin(launchAngle) * launchSpeed;
+                }
+                this.vx = 0; this.vy = 0;
+                this.life = 1.0;
+                this.decay = isText ? 0.006 : 0.018; 
+                this.size = isText ? 22 : 1.6;
+                this.friction = isText ? 0.98 : 0.96; 
+                this.holdTimer = isText ? 70 : 0; 
+                this.shattered = false;
+                this.textColor = isText ? color : 'white';
+            }
+            draw() {
+                ctx.save();
+                ctx.globalAlpha = Math.max(0, this.life);
+                if (this.isText) {
+                    ctx.fillStyle = this.textColor;
+                    ctx.shadowBlur = 20; ctx.shadowColor = this.textColor;
+                    ctx.font = `900 ${this.size}px 'Audiowide', cursive`;
+                    ctx.textAlign = "center";
+                    ctx.fillText(this.char, this.x, this.y);
+                } else {
+                    ctx.fillStyle = this.color;
+                    ctx.fillRect(this.x, this.y, this.size, this.size);
+                }
+                ctx.restore();
+            }
+            update() {
+                if (this.holdTimer > 0) {
+                    this.holdTimer--;
+                } else {
+                    if (!this.shattered) {
+                        this.vx = this.targetVx; this.vy = this.targetVy;
+                        this.shattered = true;
+                    }
+                    this.vx *= this.friction; this.vy *= this.friction;
+                    this.x += this.vx; this.y += this.vy;
+                    if(!this.isText) {
+                        this.vy += 0.08;
+                    } else if (this.life > 0.2) {
+                        if(Math.random() > 0.4) {
+                            particles.push(new Particle(this.x, this.y, this.textColor, false, '', Math.random()*6.28, Math.random()*3));
+                        }
+                    }
+                    this.life -= this.decay;
+                }
+            }
+        }
+
+        function triggerExtremeBoom(x, y, isMilestone = false) {
+            const count = isMilestone ? 8280 : 2760; 
+            for (let i = 0; i < count; i++) {
+                const a = Math.random() * Math.PI * 2;
+                const s = Math.random() * 20 + 2;
+                particles.push(new Particle(x, y, currentColors[Math.floor(Math.random() * 3)], false, '', a, s));
+            }
+            hearts.forEach(h => {
+                if (h.visible && !h.isCaptured && Math.hypot(h.x - x, h.y - y) < 450) {
+                    h.isCaptured = true; h.captureTimer = 120; 
+                }
+            });
+        }
+
+        function triggerMilestone() {
+            const phrase = "MYLIU TAVE";
+            const spacing = 22;
+            const startX = width / 2 - (phrase.length * spacing) / 2;
+            triggerExtremeBoom(width/2, height/2, true);
+            for (let i = 0; i < phrase.length; i++) {
+                const letterColor = currentColors[Math.floor(Math.random() * currentColors.length)];
+                particles.push(new Particle(startX + (i * spacing), height / 2, letterColor, true, phrase[i]));
+            }
+        }
+
+        function handle(e) {
+            if (e.type === 'touchstart') e.preventDefault();
+            const pos = e.touches ? e.touches[0] : e;
+            const tx = pos.clientX;
+            const ty = pos.clientY;
+            let hit = false;
+            
+            // Combo system
+            comboTimer = 0;
+            
+            if (megaHeart && megaHeart.visible && Math.hypot(megaHeart.x - tx, megaHeart.y - ty) < megaHeart.size * 2.5) {
+                hit = true; megaHeart.explode(false); triggerExtremeBoom(tx, ty);
+            }
+            hearts.forEach(h => {
+                if (h.visible && !h.isCaptured && Math.hypot(h.x - tx, h.y - ty) < h.size * 2.0) {
+                    hit = true; h.explode(false);
+                }
+            });
+            if (!hit) for (let i = 0; i < 5; i++) particles.push(new Particle(tx, ty, '#fff', false, '', Math.random()*6.28, 1));
+        }
+
+        function updateDifficulty() {
+            difficulty = Math.ceil(totalPopped / 30) + 1;
+            difficultyEl.innerText = difficulty;
+        }
+
+        function updateCombo() {
+            comboTimer += 0.016;
+            if (comboTimer > comboTimeout) {
+                combo = 1;
+                comboTimer = 0;
+            }
+            comboDisplayEl.innerText = combo;
+        }
+
+        function updatePowerUp() {
+            if (powerUpActive) {
+                powerUpTimer -= 16;
+                if (powerUpTimer <= 0) {
+                    powerUpActive = null;
+                    powerUpDisplayEl.style.display = 'none';
+                }
+            }
+        }
+
+        function animate() {
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.25)'; 
+            ctx.fillRect(0, 0, width, height);
+            drawStars();
+            drawOcean();
+            hearts.forEach(h => { h.update(); h.draw(); });
+            if (megaHeart) { megaHeart.update(); megaHeart.draw(); }
+            for (let i = particles.length - 1; i >= 0; i--) {
+                particles[i].update(); particles[i].draw();
+                if (particles[i].life <= 0) particles.splice(i, 1);
+            }
+            
+            updateDifficulty();
+            updateCombo();
+            updatePowerUp();
+            
+            requestAnimationFrame(animate);
+        }
+
+        // Initialize
+        highScoreEl.innerText = highScore;
+        
+        for (let i = 0; i < 5; i++) hearts.push(new HeartBase(false));
+        setInterval(() => { if (!megaHeart || !megaHeart.visible) megaHeart = new HeartBase(true); }, 6000);
+        window.addEventListener('touchstart', handle, {passive: false});
+        window.addEventListener('mousedown', handle);
+        animate();
+    </script>
+</body>
+</html>
